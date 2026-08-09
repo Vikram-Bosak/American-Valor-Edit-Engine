@@ -137,8 +137,12 @@ def draw_hook_circle(video_path: str, output_path: str) -> bool:
         "-pix_fmt", "bgr24",
         "-r", str(fps),
         "-i", "-",
+        "-i", video_path,
+        "-map", "0:v:0",
+        "-map", "1:a:0?",
         "-c:v", "libx264",
         "-pix_fmt", "yuv420p",
+        "-c:a", "aac",
         output_path
     ]
     process = subprocess.Popen(ffmpeg_cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
