@@ -121,6 +121,11 @@
 **/tmp/
 **/temp/
 
+# Pipeline runtime
+workspace/
+logs/
+src/temp/
+
 # Dart
 **/.dart_tool/
 **/*.dart_tool
