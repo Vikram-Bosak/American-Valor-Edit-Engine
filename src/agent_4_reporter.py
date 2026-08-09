@@ -109,10 +109,11 @@ def main():
     else:
         send_discord_report(embed)
     
-    # Cleanup workspace completely
-    if os.path.exists("workspace"):
-        shutil.rmtree("workspace")
-        print("Cleaned up workspace directory.")
+    # Cleanup workspace completely (skip when workflow needs the edited video)
+    if os.environ.get("SKIP_WORKSPACE_CLEANUP") != "1":
+        if os.path.exists("workspace"):
+            shutil.rmtree("workspace")
+            print("Cleaned up workspace directory.")
         
     # Also clean up temp state uploads
     try:

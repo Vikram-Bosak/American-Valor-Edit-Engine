@@ -68,6 +68,7 @@ jobs:
         if: always()
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL_MILITARY }}
+          SKIP_WORKSPACE_CLEANUP: "1"
         run: |
           python src/agent_4_reporter.py
 
