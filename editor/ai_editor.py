@@ -1,10 +1,6 @@
 import os
 import sys
 import json
-import math
-import wave
-import struct
-import random
 import subprocess
 import urllib.request
 from datetime import datetime
@@ -217,92 +213,6 @@ def draw_hook_circle(video_path: str, output_path: str) -> bool:
 
 
 # ──────────────────────────────────────────────────────────────
-# Sound Effect synthesis (ported from funny-video-eddit-agent)
-# ──────────────────────────────────────────────────────────────
-def generate_sfx(sfx_type, filepath):
-    sample_rate = 44100
-
-    if sfx_type == "ding":
-        duration = 0.5
-        num_samples = int(duration * sample_rate)
-        data = bytearray()
-        for i in range(num_samples):
-            t = i / sample_rate
-            freq = 1000.0
-            val = math.sin(2 * math.pi * freq * t) * math.exp(-6 * t)
-            val = int(val * 32767)
-            data.extend(struct.pack('<h', val))
-
-    elif sfx_type == "boing":
-        duration = 0.8
-        num_samples = int(duration * sample_rate)
-        data = bytearray()
-        for i in range(num_samples):
-            t = i / sample_rate
-            freq = 200 + 300 * abs(math.sin(2 * math.pi * 3 * t))
-            val = math.sin(2 * math.pi * freq * t) * (1.0 - t / duration)
-            val = int(val * 32767)
-            data.extend(struct.pack('<h', val))
-
-    elif sfx_type == "whoosh":
-        duration = 0.6
-        num_samples = int(duration * sample_rate)
-        data = bytearray()
-        random.seed(42)
-        for i in range(num_samples):
-            t = i / sample_rate
-            env = math.sin(math.pi * t / duration)
-            val = (random.random() * 2.0 - 1.0) * env * 0.5
-            val = int(val * 32767)
-            data.extend(struct.pack('<h', val))
-
-    elif sfx_type == "alert":
-        duration = 0.4
-        num_samples = int(duration * sample_rate)
-        data = bytearray()
-        for i in range(num_samples):
-            t = i / sample_rate
-            if t < 0.15 or (t > 0.22 and t < 0.37):
-                freq = 1200.0
-                val = math.sin(2 * math.pi * freq * t)
-            else:
-                val = 0
-            val = int(val * 32767 * 0.7)
-            data.extend(struct.pack('<h', val))
-
-    elif sfx_type == "fail":
-        duration = 1.0
-        num_samples = int(duration * sample_rate)
-        data = bytearray()
-        for i in range(num_samples):
-            t = i / sample_rate
-            freq = 300.0 - 150.0 * (t / duration)
-            val = math.sin(2 * math.pi * freq * t) * (1.0 - t / duration)
-            val = int(val * 32767 * 0.8)
-            data.extend(struct.pack('<h', val))
-
-    else:  # "laugh"
-        duration = 1.2
-        num_samples = int(duration * sample_rate)
-        data = bytearray()
-        for i in range(num_samples):
-            t = i / sample_rate
-            pulse = abs(math.sin(2 * math.pi * 5 * t))
-            freq = 180.0 + 40.0 * pulse
-            val = math.sin(2 * math.pi * freq * t) * pulse * (1.0 - t / duration)
-            val = int(val * 32767 * 0.6)
-            data.extend(struct.pack('<h', val))
-
-    with wave.open(filepath, 'wb') as w:
-        w.setnchannels(1)
-        w.setsampwidth(2)
-        w.setframerate(sample_rate)
-        w.writeframes(data)
-
-    return filepath
-
-
-# ──────────────────────────────────────────────────────────────
 # Video Analysis (ported from funny-video-eddit-agent video_analysis_agent)
 # ──────────────────────────────────────────────────────────────
 def analyze_video_content(video_path: str) -> dict:
@@ -312,7 +222,6 @@ def analyze_video_content(video_path: str) -> dict:
         "duration": 0.0,
         "crop_start": 0.0,
         "crop_duration": 59.0,
-        "sound_effects": [],
         "summary": "No visual summary available.",
         "ocr_text": "",
         "scene_analysis": [],
@@ -413,62 +322,6 @@ def analyze_video_content(video_path: str) -> dict:
         result["crop_start"] = crop_start
         result["crop_duration"] = crop_duration
         print(f"Selected crop window: start={crop_start:.2f}s, duration={crop_duration:.2f}s")
-
-        # Plan sound effects
-        if client:
-            sfx_prompt = f"""
-            You are an expert video editor. Analyze this video timeline data and plan exactly 2 to 4 appropriate sound effects to add to the video to make it engaging and energetic.
-
-            Selected Crop Window: start={crop_start:.2f}s, duration={crop_duration:.2f}s (all sound effect timestamps MUST be between 0.0 and {crop_duration:.2f}s relative to the start of the crop window).
-
-            Timeline and Scene Analysis:
-            {json.dumps(result['scene_analysis'], indent=2)}
-
-            Transcript with Timestamps:
-            {result['transcript'][:2000]}
-
-            Available sound effect types:
-            - "boing" (funny bounce/action/surprise)
-            - "whoosh" (fast movement/scene change)
-            - "ding" (success/bright idea/ding)
-            - "alert" (warning/alarm/shock)
-            - "fail" (funny failure/falling/slip)
-            - "laugh" (man chuckling/giggling)
-
-            Identify 2 to 4 key moments in the cropped video where these sound effects would fit best.
-            Return ONLY a valid JSON list of sound effect objects, where each object has "time_offset" (seconds from crop start as float) and "type" (one of the available types). Example response:
-            [
-              {{"time_offset": 3.5, "type": "whoosh"}},
-              {{"time_offset": 12.0, "type": "ding"}}
-            ]
-            Do not output any explanation or extra text.
-            """
-            sound_effects = []
-            try:
-                sfx_response = client.chat.completions.create(
-                    model="meta/llama-3.1-70b-instruct",
-                    messages=[{"role": "user", "content": sfx_prompt}],
-                    temperature=0.5,
-                    max_tokens=1024,
-                    stream=False
-                ).choices[0].message.content.strip()
-                clean_sfx_json = sfx_response.replace("```json", "").replace("```", "").strip()
-                sound_effects = json.loads(clean_sfx_json)
-                valid_types = {"boing", "whoosh", "ding", "alert", "fail", "laugh"}
-                sound_effects = [
-                    sfx for sfx in sound_effects
-                    if isinstance(sfx, dict)
-                    and 0.0 <= float(sfx.get("time_offset", -1)) <= crop_duration
-                    and sfx.get("type") in valid_types
-                ]
-            except Exception as e:
-                print(f"Failed to plan sound effects with AI: {e}")
-                sound_effects = [
-                    {"time_offset": float(f"{crop_duration * 0.3:.2f}"), "type": "whoosh"},
-                    {"time_offset": float(f"{crop_duration * 0.7:.2f}"), "type": "ding"}
-                ]
-            result["sound_effects"] = sound_effects
-            print(f"Planned sound effects: {sound_effects}")
 
         # Summary via LLM
         if client:
@@ -696,18 +549,7 @@ def process_video_with_ai(input_path: str, logo_path: str, output_path: str, tas
         if voiceover_path and os.path.exists(voiceover_path):
             subs_success = generate_ass_subtitles(voiceover_path, ass_path)
 
-        # 7. Generate sound effect files
-        sfx_files = []
-        sound_effects = analysis.get("sound_effects", [])
-        for i, sfx in enumerate(sound_effects):
-            sfx_path = f"temp/{video_id}_sfx_{i}.wav"
-            try:
-                generate_sfx(sfx.get("type", "ding"), sfx_path)
-                sfx_files.append({"path": sfx_path, "offset": float(sfx.get("time_offset", 0))})
-            except Exception as e:
-                print(f"Failed to generate SFX {i}: {e}")
-
-        # 8. Final mix: subtitles + voiceover + original audio swap + sound effects
+        # 7. Final mix: subtitles + voiceover + original audio swap
         T = crop_duration
         command = ["ffmpeg", "-y"]
 
@@ -716,8 +558,6 @@ def process_video_with_ai(input_path: str, logo_path: str, output_path: str, tas
         if voiceover_path and os.path.exists(voiceover_path):
             inputs.extend(["-i", voiceover_path])
             has_voice_input = True
-        for s in sfx_files:
-            inputs.extend(["-i", s["path"]])
         command.extend(inputs)
 
         filter_parts = []
@@ -743,12 +583,6 @@ def process_video_with_ai(input_path: str, logo_path: str, output_path: str, tas
             else:
                 filter_parts.append(f"[{voice_idx}:a]asetpts=PTS-STARTPTS[tts_main]")
                 audio_parts = ["[tts_main]"]
-
-        sfx_idx = voice_idx + (1 if has_voice_input else 0)
-        for i, s in enumerate(sfx_files):
-            offset_ms = int(s["offset"] * 1000)
-            filter_parts.append(f"[{sfx_idx + i}:a]asetpts=PTS-STARTPTS,adelay={offset_ms}|{offset_ms}[sfx{i}]")
-            audio_parts.append(f"[sfx{i}]")
 
         if audio_parts:
             filter_parts.append("".join(audio_parts) + f"amix=inputs={len(audio_parts)}:normalize=0[final_audio]")
