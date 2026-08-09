@@ -152,11 +152,15 @@ def run_upload(video_data):
         if video_data.get("tiktok_err"):
             logging.error(f"  TikTok error: {video_data['tiktok_err']}")
         
-    # Cleanup — always runs regardless of upload outcome
+    # Cleanup — keep the edited video if no upload succeeded so it stays
+    # available as a downloadable artifact; remove it only after a successful upload.
     try:
-        if os.path.exists(edited_video_path):
-            os.remove(edited_video_path)
-            logging.info(f"Cleaned up video file: {edited_video_path}")
+        if fb_success or yt_success or tt_success:
+            if os.path.exists(edited_video_path):
+                os.remove(edited_video_path)
+                logging.info(f"Cleaned up video file: {edited_video_path}")
+        else:
+            logging.info(f"Keeping edited video for artifact: {edited_video_path}")
     except Exception as e:
         logging.warning(f"Failed to clean up video file {edited_video_path}: {e}")
         
