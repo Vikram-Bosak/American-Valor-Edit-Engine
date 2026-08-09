@@ -71,15 +71,18 @@ jobs:
         run: |
           python src/agent_4_reporter.py
 
-      - name: 💾 Commit updated files (like history and archive)
+      - name: 💾 Commit edited video + history (permanent on GitHub)
         if: always()
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          mkdir -p output
+          cp workspace/edited_*.mp4 output/ 2>/dev/null || true
+          git add output/ 2>/dev/null || true
           git add downloaded_history.txt || true
           git add daily_limits.json || true
           git add -f tiktok_error.png || true
-          git commit -m "Update download history [skip ci]" || true
+          git commit -m "Update download history + edited video [skip ci]" || true
           git pull origin master --rebase --strategy-option=ours || true
           git push origin HEAD:master || true
 
