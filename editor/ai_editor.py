@@ -559,9 +559,20 @@ def process_video_with_ai(input_path: str, logo_path: str, output_path: str, tas
 
         inputs = ["-stream_loop", "-1", "-i", temp_branded]
         has_voice_input = False
+        voiceover_duration = 0.0
         if voiceover_path and os.path.exists(voiceover_path):
             inputs.extend(["-i", voiceover_path])
             has_voice_input = True
+            try:
+                vprobe_out = subprocess.run(
+                    ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                     "-of", "default=noprint_wrappers=1:nokey=1", voiceover_path],
+                    capture_output=True, text=True, timeout=30
+                ).stdout.strip()
+                if vprobe_out:
+                    voiceover_duration = float(vprobe_out)
+            except Exception as e:
+                print(f"Failed to probe voiceover duration: {e}")
         command.extend(inputs)
 
         filter_parts = []
@@ -573,25 +584,43 @@ def process_video_with_ai(input_path: str, logo_path: str, output_path: str, tas
 
         audio_parts = []
         voice_idx = 1
+        final_audio_label = None
         if has_voice_input:
             if has_audio and T >= 5.0:
+                # Middle 5s window: original audio plays there, voiceover is muted.
+                # Voiceover fills everything before the window and resumes after it.
+                # Any time beyond the voiceover's natural end is filled with the
+                # original audio so the video never goes silent.
                 S_orig = (T - 5.0) / 2.0
                 E_orig = S_orig + 5.0
-                S_orig_ms = int(S_orig * 1000)
-                E_orig_ms = int(E_orig * 1000)
+                Vo = voiceover_duration if voiceover_duration > 0 else T
 
-                filter_parts.append(f"[{voice_idx}:a]atrim=end={S_orig:.2f},asetpts=PTS-STARTPTS[tts1]")
-                filter_parts.append(f"[{voice_idx}:a]atrim=start={S_orig:.2f},asetpts=PTS-STARTPTS,adelay={E_orig_ms}|{E_orig_ms}[tts2]")
-                filter_parts.append(f"[0:a]atrim=start={S_orig:.2f}:end={E_orig:.2f},asetpts=PTS-STARTPTS,adelay={S_orig_ms}|{S_orig_ms}[orig_mid]")
-                audio_parts = ["[tts1]", "[orig_mid]", "[tts2]"]
+                # Voiceover: play everywhere except the middle original window.
+                vo_expr = f"if(between(t,{S_orig:.2f},{E_orig:.2f}),0,1)"
+                # Original: play in the middle window and everywhere after the
+                # voiceover has ended, so nothing is ever silent.
+                orig_expr = f"if(between(t,{S_orig:.2f},{E_orig:.2f}),1,if(gt(t,{Vo:.2f}),1,0))"
+
+                filter_parts.append(
+                    f"[{voice_idx}:a]apad=whole_dur={T:.2f},"
+                    f"volume='{vo_expr}':eval=frame[tts_full]"
+                )
+                filter_parts.append(
+                    f"[0:a]volume='{orig_expr}':eval=frame[orig_fill]"
+                )
+                filter_parts.append("[tts_full][orig_fill]amix=inputs=2:normalize=0[final_audio]")
+                final_audio_label = "[final_audio]"
             else:
                 filter_parts.append(f"[{voice_idx}:a]asetpts=PTS-STARTPTS[tts_main]")
                 audio_parts = ["[tts_main]"]
 
         if audio_parts:
             filter_parts.append("".join(audio_parts) + f"amix=inputs={len(audio_parts)}:normalize=0[final_audio]")
+            final_audio_label = "[final_audio]"
+
+        if final_audio_label:
             command.extend(["-filter_complex", ";".join(filter_parts)])
-            command.extend(["-map", video_output_label, "-map", "[final_audio]"])
+            command.extend(["-map", video_output_label, "-map", final_audio_label])
         else:
             if filter_parts:
                 command.extend(["-filter_complex", ";".join(filter_parts)])
