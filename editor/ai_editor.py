@@ -219,6 +219,32 @@ def draw_hook_circle(video_path: str, output_path: str) -> bool:
 # ──────────────────────────────────────────────────────────────
 # Video Analysis (ported from funny-video-eddit-agent video_analysis_agent)
 # ──────────────────────────────────────────────────────────────
+def _fallback_summary(result: dict) -> str:
+    """Build a meaningful visual summary from locally-available analysis data."""
+    transcript = result.get("transcript", "")
+    has_real_dialogue = transcript and transcript != "No dialogue detected."
+
+    if has_real_dialogue:
+        lines = []
+        for line in transcript.splitlines():
+            text = line.split("]", 1)[-1].strip() if "]" in line else line.strip()
+            if text and text != "No dialogue detected.":
+                lines.append(text)
+        if lines:
+            text = " ".join(lines).strip()
+            text = " ".join(text.split())
+            if len(text) > 88:
+                text = text[:85].rsplit(" ", 1)[0] + "..."
+            return f"Featured military footage: {text}"
+
+    num_scenes = len(result.get("scene_analysis", []))
+    duration = float(result.get("duration", 0.0))
+    base = f"High-action military footage, approximately {duration:.0f} seconds long."
+    if num_scenes:
+        return f"{base} Featuring {num_scenes} distinct scenes of US Armed Forces operations."
+    return base
+
+
 def analyze_video_content(video_path: str) -> dict:
     result = {
         "transcript": "",
@@ -347,6 +373,11 @@ def analyze_video_content(video_path: str) -> dict:
             except Exception as e:
                 print(f"Summarization failed: {e}")
 
+        # Local fallback summary (no LLM key): build from transcript/scene data so
+        # the visual summary at the top of the video is never the placeholder text.
+        if not result["summary"] or result["summary"] == "No visual summary available.":
+            result["summary"] = _fallback_summary(result)
+
     except Exception as e:
         print(f"Error during video analysis: {e}")
 
@@ -365,6 +396,22 @@ def write_voiceover_script(analysis: dict, task: dict = None) -> str:
 
     if not client:
         print("NVIDIA_API_KEY not found. Generating fallback script.")
+        transcript = analysis.get("transcript", "No dialogue detected.")
+        has_voice = transcript and transcript != "No dialogue detected."
+        if has_voice:
+            lines = []
+            for line in transcript.splitlines():
+                text = line.split("]", 1)[-1].strip() if "]" in line else line.strip()
+                if text and text != "No dialogue detected.":
+                    lines.append(text)
+            spoken = " ".join(" ".join(lines).split())
+            if len(spoken) > 120:
+                spoken = spoken[:117].rsplit(" ", 1)[0] + "..."
+            if spoken:
+                return (
+                    "Witness the power and precision of the United States Armed Forces. "
+                    f"{spoken} Watch until the end for an incredible display of strength and dedication."
+                )
         return "Witness the power and precision of the United States Armed Forces. Watch until the end for an incredible display of strength and dedication."
 
     has_voice = transcript and transcript != "No dialogue detected."
