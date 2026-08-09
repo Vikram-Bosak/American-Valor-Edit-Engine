@@ -100,8 +100,8 @@ def run_single_sequence():
         subprocess.run("git config --global user.email 'github-actions[bot]@users.noreply.github.com'", shell=True)
         subprocess.run("git add downloaded_history.txt daily_limits.json", shell=True, check=True)
         subprocess.run("git commit -m 'Update history (mid-run) [skip ci]'", shell=True, check=True)
-        subprocess.run("git pull origin main --rebase --strategy-option=ours", shell=True, check=True)
-        subprocess.run("git push origin HEAD:main", shell=True, check=True)
+        subprocess.run("git pull origin master --rebase --strategy-option=ours", shell=True, check=True)
+        subprocess.run("git push origin HEAD:master", shell=True, check=True)
         print("History pushed successfully.")
     except Exception as e:
         print(f"Warning: Mid-run history push failed: {e}")

@@ -80,5 +80,15 @@ jobs:
           git add daily_limits.json || true
           git add -f tiktok_error.png || true
           git commit -m "Update download history [skip ci]" || true
-          git pull origin main --rebase --strategy-option=ours || true
-          git push origin HEAD:main || true
+          git pull origin master --rebase --strategy-option=ours || true
+          git push origin HEAD:master || true
+
+      - name: 📦 Upload edited video as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: edited-video
+          path: |
+            workspace/edited_*.mp4
+            workspace/report.json
+          if-no-files-found: ignore
