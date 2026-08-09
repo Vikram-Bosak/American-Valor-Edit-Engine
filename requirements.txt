@@ -13,3 +13,12 @@ yt-dlp
 playwright
 pilmoji
 google-genai
+
+# AI Editing Skills (voiceover, subtitles, sound effects, red hook circle)
+opencv-python-headless
+scenedetect[opencv]
+faster-whisper
+ultralytics
+kokoro-onnx
+soundfile
+onnxruntime

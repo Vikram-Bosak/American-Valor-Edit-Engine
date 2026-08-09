@@ -4,10 +4,10 @@ from datetime import datetime
 
 # Add the root project directory to path so we can import editor
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from editor.advanced_editor import process_video_dynamically
+from editor.ai_editor import process_video_with_ai
 
 def process_video(video_data):
-    print("Starting Agent 2: Video Editor (Military Style)")
+    print("Starting Agent 2: Video Editor (Military Style + AI Editing Skills)")
     
     raw_video_path = video_data.get('local_path', "workspace/raw_video.mp4")
     title = video_data.get('title', 'Unknown Video')
@@ -21,8 +21,9 @@ def process_video(video_data):
     print(f"Processing video: {title}")
     
     try:
-        # Use Military-specific editing logic
-        edited_path, hook_line = process_video_dynamically(
+        # Use AI-enhanced editing (voiceover, subtitles, sound effects, red hook circle)
+        # built on top of the American-Valor branding layout
+        edited_path, hook_line = process_video_with_ai(
             raw_video_path, 
             'assets/custom_logo.png', 
             edited_video_path, 

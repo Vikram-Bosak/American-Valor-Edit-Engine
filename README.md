@@ -2,19 +2,32 @@
 
 Automated pipeline to download, edit, and upload USA Military & Army videos from X (Twitter).
 
-This project is based on the American-Valor workflow. The entire editing, uploading, SEO, safety-filter, and reporting logic remains identical. The only change is in the **video download logic**: the Twitter/X profiles to download from are now supplied via input (environment variables), instead of a hardcoded list.
+This project combines the American-Valor workflow with the AI editing skills from the funny-video-eddit-agent pipeline. It keeps the American-Valor branding frame (logo + headline overlay) and adds **AI voiceover, ALL-CAPS subtitles, sound effects, and a red hook circle** to every video. The video download logic now accepts Twitter/X profiles via environment-variable input instead of a hardcoded list.
 
 ## How It Works
 
 ```
 main_agent.py (Orchestrator)
   ├── [1] src/agent_1_downloader.py  → Download video from input X profile(s) via Nitter RSS + yt-dlp
-  ├── [2] src/agent_2_editor.py      → Military-style edit (logo frame, 9:16 layout, no voiceover)
+  ├── [2] src/agent_2_editor.py      → AI-enhanced edit (editor/ai_editor.py) with voiceover + subtitles + SFX + red hook circle on a 9:16 branding frame
   ├── [3] src/agent_3_uploader.py    → Upload to Facebook / YouTube Shorts / TikTok
   └── [4] src/agent_4_reporter.py    → Discord report + workspace cleanup
 ```
 
-## Download Logic (the changed part)
+## Editing Skills (`editor/ai_editor.py`)
+
+The editing stage applies these AI skills on top of the American-Valor branding layout:
+
+1. **Video Analysis** — PySceneDetect scene detection + faster-whisper transcription. If the video is longer than 59s, the LLM selects the most engaging crop window; the LLM also plans 2-4 sound effects.
+2. **AI Voiceover Script** — NVIDIA LLM writes a short, epic, patriotic narration (based on the transcript, or the visual summary if the clip is silent).
+3. **Voice Generation** — Kokoro ONNX TTS (female `af_sarah` voice) synthesizes the voiceover.
+4. **Branding Frame** — Pillow/pilmoji builds a 1080x1920 "American Valor" frame (logo, verified badge, headline/story) around the 9:16 cropped video.
+5. **Red Hook Circle** — YOLOv8n detects the subject's head and draws a red circle for the first 1.5 seconds.
+6. **Subtitles** — faster-whisper word timestamps generate ASS subtitles (ALL CAPS, bold with black outline) burned into the video.
+7. **Sound Effects** — synthesized WAV SFX (boing/whoosh/ding/alert/fail/laugh) are mixed at the AI-planned timestamps.
+8. **Audio Mix** — TTS voiceover plays over the video, with the original audio swapped back in for 5 seconds in the middle.
+
+## Download Logic
 
 `src/agent_1_downloader.py` downloads the latest unprocessed video posted in the last 24 hours from a given X/Twitter profile.
 
@@ -27,7 +40,7 @@ main_agent.py (Orchestrator)
    - **Posted within the last 24 hours**
    - **Not already processed** (checked against `downloaded_history.txt`)
 4. Valid videos are sorted oldest-first and downloaded with yt-dlp to `workspace/raw_video.mp4`.
-5. The downloaded video flows into the existing editing workflow (`src/agent_2_editor.py`) unchanged.
+5. The downloaded video flows into the AI editing workflow (`src/agent_2_editor.py` → `editor/ai_editor.py`).
 
 ## Configuration
 
