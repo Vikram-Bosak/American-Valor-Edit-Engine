@@ -10,6 +10,12 @@ from dotenv import load_dotenv
 load_dotenv()
 HISTORY_FILE = 'downloaded_history.txt'
 
+ydl_opts_download = {
+    'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+    'outtmpl': 'workspace/raw_video.mp4',
+    'quiet': False
+}
+
 def load_history():
     if os.path.exists(HISTORY_FILE):
         with open(HISTORY_FILE, 'r') as f:
@@ -71,13 +77,6 @@ def search_and_download_latest_video():
             
     history = load_history()
     
-    ydl_opts_download = {
-        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
-        'outtmpl': 'workspace/raw_video.mp4',
-        'quiet': False
-    }
-    
-    # 24 hours lookback to ensure we find videos across all timezones
     time_limit = datetime.now(timezone.utc) - timedelta(hours=24)
     print(f"Time limit is set to: {time_limit.isoformat()}")
     
@@ -247,7 +246,49 @@ def search_and_download_latest_video():
 def run_downloader():
     print("Starting Agent 1: X (Twitter) Downloader")
     os.makedirs('workspace', exist_ok=True)
-    
+
+    # Optional forced video: if X_FORCE_VIDEO_URL is set, download that exact
+    # video (bypassing history and the 24h freshness window) so any specific
+    # tweet can be re-edited.
+    force_url = os.environ.get("X_FORCE_VIDEO_URL", "").strip()
+    if force_url:
+        print(f"Forced video URL provided: {force_url}")
+        try:
+            import re
+            m = re.search(r"status/(\d+)", force_url)
+            tweet_id = m.group(1) if m else None
+        except Exception:
+            tweet_id = None
+
+        filename = "workspace/raw_video.mp4"
+        if os.path.exists(filename):
+            os.remove(filename)
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts_download) as ydl:
+                info = ydl.extract_info(force_url, download=True)
+                clean_title = info.get('title', f"Twitter Video {tweet_id}")
+            meta = {
+                "title": clean_title,
+                "source_url": force_url,
+                "video_id": tweet_id
+            }
+            with open("workspace/meta.json", "w") as f:
+                json.dump(meta, f)
+            if tweet_id:
+                save_to_history(tweet_id)
+            stats = {
+                "profiles_scanned": 0,
+                "new_videos_found": 1,
+                "videos_downloaded": 1,
+                "videos_skipped": 0,
+                "errors": []
+            }
+            return filename, clean_title, tweet_id, force_url, force_url, stats
+        except Exception as e:
+            print(f"Error downloading forced video {force_url}: {e}")
+            stats = {"profiles_scanned": 0, "new_videos_found": 0, "videos_downloaded": 0, "videos_skipped": 0, "errors": [f"Forced download error: {str(e)}"]}
+            return None, None, None, None, None, stats
+
     result = search_and_download_latest_video()
     if result and len(result) == 6:
         video_path, title, tweet_id, source_url, video_url, stats = result

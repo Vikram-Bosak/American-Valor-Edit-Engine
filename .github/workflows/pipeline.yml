@@ -14,6 +14,10 @@ on:
         description: 'Alias for x_profiles. Comma-separated Twitter profiles.'
         required: false
         type: string
+      force_video_url:
+        description: 'Force download & edit this exact X video URL (bypasses history and 24h window). Leave empty to auto-pick.'
+        required: false
+        type: string
 
 jobs:
   run-pipeline:
@@ -59,6 +63,7 @@ jobs:
           TIKTOK_AUTH_STATE_B64: ${{ secrets.TIKTOK_AUTH_STATE_B64 }}
           X_PROFILES: ${{ github.event.inputs.x_profiles || secrets.X_PROFILES }}
           TWITTER_PROFILES: ${{ github.event.inputs.twitter_profiles || secrets.X_PROFILES }}
+          X_FORCE_VIDEO_URL: ${{ github.event.inputs.force_video_url }}
           X_BACKUP_PROFILES: ${{ secrets.X_BACKUP_PROFILES }}
         run: |
           echo "Starting Main Agent..."
