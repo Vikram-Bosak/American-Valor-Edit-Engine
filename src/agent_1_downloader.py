@@ -267,15 +267,16 @@ def run_downloader():
             with yt_dlp.YoutubeDL(ydl_opts_download) as ydl:
                 info = ydl.extract_info(force_url, download=True)
                 clean_title = info.get('title', f"Twitter Video {tweet_id}")
+                resolved_id = str(info.get('id') or tweet_id)
             meta = {
                 "title": clean_title,
                 "source_url": force_url,
-                "video_id": tweet_id
+                "video_id": resolved_id
             }
             with open("workspace/meta.json", "w") as f:
                 json.dump(meta, f)
-            if tweet_id:
-                save_to_history(tweet_id)
+            if resolved_id:
+                save_to_history(resolved_id)
             stats = {
                 "profiles_scanned": 0,
                 "new_videos_found": 1,
@@ -283,11 +284,20 @@ def run_downloader():
                 "videos_skipped": 0,
                 "errors": []
             }
-            return filename, clean_title, tweet_id, force_url, force_url, stats
+            video_data = {
+                "id": resolved_id,
+                "tweet_id": resolved_id,
+                "title": clean_title,
+                "source_url": force_url,
+                "local_path": filename,
+                "status": "DOWNLOADED"
+            }
+            print("Agent 1 completed successfully (forced video).")
+            return video_data, stats
         except Exception as e:
             print(f"Error downloading forced video {force_url}: {e}")
             stats = {"profiles_scanned": 0, "new_videos_found": 0, "videos_downloaded": 0, "videos_skipped": 0, "errors": [f"Forced download error: {str(e)}"]}
-            return None, None, None, None, None, stats
+            return None, stats
 
     result = search_and_download_latest_video()
     if result and len(result) == 6:
