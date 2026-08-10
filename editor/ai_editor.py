@@ -233,9 +233,13 @@ def _fallback_summary(result: dict) -> str:
         if lines:
             text = " ".join(lines).strip()
             text = " ".join(text.split())
-            if len(text) > 88:
-                text = text[:85].rsplit(" ", 1)[0] + "..."
-            return f"Featured military footage: {text}"
+            # Require a meaningful amount of actual speech; near-empty
+            # low-confidence transcripts (e.g. a stray punctuation mark)
+            # fall through to the scene/duration description below.
+            if len(text) >= 12:
+                if len(text) > 88:
+                    text = text[:85].rsplit(" ", 1)[0] + "..."
+                return f"Featured military footage: {text}"
 
     num_scenes = len(result.get("scene_analysis", []))
     duration = float(result.get("duration", 0.0))
@@ -405,9 +409,11 @@ def write_voiceover_script(analysis: dict, task: dict = None) -> str:
                 if text and text != "No dialogue detected.":
                     lines.append(text)
             spoken = " ".join(" ".join(lines).split())
-            if len(spoken) > 120:
-                spoken = spoken[:117].rsplit(" ", 1)[0] + "..."
-            if spoken:
+            # Only include the transcript if it is real, meaningful speech;
+            # near-empty low-confidence transcripts fall back to the generic script.
+            if len(spoken) >= 12:
+                if len(spoken) > 120:
+                    spoken = spoken[:117].rsplit(" ", 1)[0] + "..."
                 return (
                     "Witness the power and precision of the United States Armed Forces. "
                     f"{spoken} Watch until the end for an incredible display of strength and dedication."
