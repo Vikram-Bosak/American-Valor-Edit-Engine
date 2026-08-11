@@ -150,6 +150,7 @@ def run_single_sequence():
     report_data["tiktok_url"] = video_data.get('tiktok_url', 'N/A')
     report_data["seo_title"] = video_data.get('title', 'N/A')
     report_data["description"] = video_data.get('description', 'N/A')
+    report_data["video_file_name"] = video_data.get('video_file_name', 'N/A')
     write_report(report_data)
     
     # Send final summary to Discord

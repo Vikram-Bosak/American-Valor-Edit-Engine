@@ -46,6 +46,7 @@ def main():
     seo_title = str(report.get('seo_title') or 'N/A').strip() or 'N/A'
     description = str(report.get('description') or 'N/A').strip() or 'N/A'
     fb_url = str(report.get('facebook_url') or 'N/A').strip() or 'N/A'
+    video_file_name = str(report.get('video_file_name') or 'N/A').strip() or 'N/A'
     
     # Search for safety flags/actions in state json files
     safety_info = "Clean (No risks flagged)"
@@ -87,6 +88,7 @@ def main():
         "color": color,
         "fields": [
             {"name": "🎬 Video Name", "value": video_name, "inline": False},
+            {"name": "📁 Unique File Name", "value": video_file_name, "inline": False},
             {"name": "🛡️ Copyright & Safety Check", "value": safety_info, "inline": False},
             {"name": "📥 Download Status", "value": download_status, "inline": True},
             {"name": "✂️ Editing Status", "value": editing_status, "inline": True},
