@@ -73,12 +73,13 @@ def run_upload():
         raise Exception("GOOGLE_DRIVE_FOLDER_ID is not set.")
 
     patterns = [
-        os.environ.get('DRIVE_UPLOAD_PATTERN', 'workspace/edited_*.mp4'),
-        'output/edited_*.mp4',
+        os.environ.get('DRIVE_UPLOAD_PATTERN', 'workspace/*.mp4'),
+        'output/*.mp4',
     ]
     files = []
     for pat in patterns:
         files.extend(glob.glob(pat))
+    files = [f for f in files if not f.endswith('raw_video.mp4')]
     files = sorted(set(files))
     if not files:
         logging.warning("No edited videos found to upload.")

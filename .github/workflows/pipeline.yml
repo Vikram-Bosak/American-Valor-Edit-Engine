@@ -83,7 +83,13 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           mkdir -p output
-          cp workspace/edited_*.mp4 output/ 2>/dev/null || true
+          for f in workspace/*.mp4; do
+            [ -f "$f" ] || continue
+            case "$f" in
+              *raw_video.mp4) continue ;;
+            esac
+            cp "$f" output/ 2>/dev/null || true
+          done
           git add output/ 2>/dev/null || true
           git add downloaded_history.txt || true
           git add daily_limits.json || true
@@ -97,7 +103,7 @@ jobs:
         env:
           GOOGLE_DRIVE_TOKEN_JSON: ${{ secrets.GOOGLE_DRIVE_TOKEN_JSON }}
           GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
-          DRIVE_UPLOAD_PATTERN: output/edited_*.mp4
+          DRIVE_UPLOAD_PATTERN: output/*.mp4
         run: |
           echo "Uploading edited videos to Google Drive..."
           python src/drive_uploader.py
@@ -108,6 +114,6 @@ jobs:
         with:
           name: edited-video
           path: |
-            workspace/edited_*.mp4
+            workspace/*.mp4
             workspace/report.json
           if-no-files-found: ignore

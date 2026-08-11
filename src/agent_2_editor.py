@@ -16,11 +16,10 @@ def slugify(text, max_len=80):
 
 
 def unique_video_filename(video_data):
-    """Build a unique title-based filename: slug_<id>.mp4"""
-    video_id = video_data.get('id', 'video')
+    """Build a title-based filename: <slug>.mp4 (no prefix, no id suffix)."""
     title = video_data.get('seo_title') or video_data.get('title') or 'video'
     slug = slugify(str(title))
-    return f"edited_{slug}_{video_id}.mp4"
+    return f"{slug}.mp4"
 
 
 def process_video(video_data):
