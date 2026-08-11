@@ -22,7 +22,7 @@ def run_upload(video_data):
     
     edited_video_path = video_data.get('edited_path')
     title = video_data.get('title', 'Unknown Video')
-    headline = video_data.get('seo_title', '')
+    headline = video_data.get('seo_title', '') or title
     source_url = video_data.get('source_url', '')
     
     if not edited_video_path or not os.path.exists(edited_video_path):
@@ -51,6 +51,12 @@ def run_upload(video_data):
                 context = json.load(f)
         else:
             context = video_data
+            
+        # Prefer the AI-generated content title for upload metadata
+        if headline:
+            context = dict(context)
+            context["title"] = headline
+            context["seo_title"] = headline
             
         metadata = generate_upload_metadata(context)
         fb_caption = f"{metadata.get('facebook_caption', headline)}\n\n{metadata.get('hashtags', '#USArmy #USNavy #Military')}"

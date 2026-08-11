@@ -391,7 +391,48 @@ def analyze_video_content(video_path: str) -> dict:
 # ──────────────────────────────────────────────────────────────
 # Script writing (ported from funny-video-eddit-agent script_writer_agent)
 # ──────────────────────────────────────────────────────────────
-def write_voiceover_script(analysis: dict, task: dict = None) -> str:
+def generate_content_title(analysis: dict, task: dict = None) -> str:
+    """Generate a new unique title based on the video content (summary/transcript)."""
+    client = _get_client()
+    task = task or {}
+    title = task.get("title", "")
+    transcript = analysis.get("transcript", "")
+    summary = analysis.get("summary", "")
+
+    base = "American Valor Military Moment"
+    fallback_input = " ".join((summary or "").split())
+    if not fallback_input or fallback_input == "No visual summary available.":
+        fallback_input = " ".join((transcript or "").split())
+
+    if client:
+        prompt = f"""
+        You are a social media title writer for a USA Military fan page.
+        Write ONE short, punchy, click-worthy video title (maximum 8 words) that describes the ACTION shown in the video.
+        Base it ONLY on the video content below. Do not hallucinate.
+        Output ONLY the title text, no quotes, no explanation.
+
+        Original Tweet Title: {title}
+        Visual Summary: {summary}
+        Transcript: {transcript[:1500]}
+        """
+        try:
+            completion = client.chat.completions.create(
+                model="meta/llama-3.1-70b-instruct",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.8,
+                max_tokens=128,
+                stream=False
+            )
+            result = completion.choices[0].message.content.strip().strip('"')
+            if result and len(result) <= 60:
+                return result
+        except Exception as e:
+            print(f"Title generation failed: {e}")
+
+    words = fallback_input.split()[:8]
+    if len(" ".join(words)) >= 12:
+        return " ".join(words).rstrip('.')
+    return base
     client = _get_client()
     task = task or {}
     title = task.get("title", "")
@@ -586,9 +627,14 @@ def process_video_with_ai(input_path: str, logo_path: str, output_path: str, tas
         script = write_voiceover_script(analysis, task)
         voiceover_path = generate_voiceover(script, video_id)
 
+        # 4b. Generate a NEW content-based title for this video
+        content_title = generate_content_title(analysis, task)
+        task = dict(task)
+        task["seo_title"] = content_title
+
         # 5. Apply American-Valor branding layout (logo + headline + story)
         from editor.advanced_editor import edit_3_4_custom_layout_template
-        headline = task.get("title", "AMERICAN VALOR")
+        headline = content_title or task.get("title", "AMERICAN VALOR")
         story = analysis.get("summary", "")
         source_credit = task.get("source", "")
         template_used = edit_3_4_custom_layout_template(

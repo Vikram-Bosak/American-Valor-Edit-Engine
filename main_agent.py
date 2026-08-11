@@ -148,7 +148,7 @@ def run_single_sequence():
     report_data["facebook_url"] = video_data.get('fb_url', 'N/A')
     report_data["youtube_url"] = video_data.get('yt_url', 'N/A')
     report_data["tiktok_url"] = video_data.get('tiktok_url', 'N/A')
-    report_data["seo_title"] = video_data.get('title', 'N/A')
+    report_data["seo_title"] = video_data.get('seo_title') or video_data.get('title', 'N/A')
     report_data["description"] = video_data.get('description', 'N/A')
     report_data["video_file_name"] = video_data.get('video_file_name', 'N/A')
     write_report(report_data)
@@ -162,8 +162,9 @@ def run_single_sequence():
         "fb_err": video_data.get('fb_err', 'N/A'),
         "yt_err": video_data.get('yt_err', 'N/A'),
         "tiktok_err": video_data.get('tiktok_err', 'N/A'),
-        "title": video_data.get('title', 'N/A'),  # SEO Title
+        "title": video_data.get('seo_title') or video_data.get('title', 'N/A'),  # New content-based title
         "description": video_data.get('description', 'N/A'),
+        "video_file_name": video_data.get('video_file_name', 'N/A'),
         "original_file": f"Twitter Link: {source_url}"  # Original Twitter Post URL
     }
     
