@@ -107,7 +107,19 @@ def main():
     }
     
     if "No new video" in download_status:
-        print("No new video to process. Skipping Discord notification to avoid spam.")
+        print("No new video to process. Sending scan report to Discord.")
+        scan_embed = {
+            "title": "🔍 Pipeline Scan Completed",
+            "color": 15158332,
+            "fields": [
+                {"name": "📥 Download Status", "value": download_status, "inline": True},
+                {"name": "📄 Workflow Run", "value": f"[View Run]({run_url})", "inline": False}
+            ],
+            "footer": {
+                "text": f"Repository: {repo} | Run ID: {run_id}"
+            }
+        }
+        send_discord_report(scan_embed)
     else:
         send_discord_report(embed)
     
